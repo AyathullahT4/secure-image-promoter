@@ -1,0 +1,35 @@
+name: Secure Image Pipeline
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-scan:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 📥 Checkout Code
+      uses: actions/checkout@v3
+
+    - name: 🐳 Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+
+    - name: 🛠️ Build Docker Image
+      run: docker build -t secure-app:latest .
+
+    - name: 🧪 Install Trivy
+      run: |
+        curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+
+    - name: 🔍 Scan Image with Trivy
+      run: |
+        trivy image --severity HIGH,CRITICAL --exit-code 1 --format table --output trivy-report.txt secure-app:latest
+
+    - name: 📤 Upload Trivy Report
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: trivy-report
+        path: trivy-report.txt
